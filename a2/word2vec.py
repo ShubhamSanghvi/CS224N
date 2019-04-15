@@ -55,70 +55,44 @@ def naiveSoftmaxLossAndGradient(
                     (dJ / dU)
     """
 
-#     print("bhenchooodd")
-#     print('centerWordVec',centerWordVec)
-#     print('centerWordVec.shape',centerWordVec.shape)
-#      
-#     print('outsideWordIdx',outsideWordIdx)
-#     print('outsideVectors',outsideVectors)
-#     print('outsideVectors.shape',outsideVectors.shape)
-#     print('dataset',dataset)
-
+    ### YOUR CODE HERE
     loss = 0.0
     gradCenterVec = np.zeros(centerWordVec.shape)
     gradOutsideVecs = np.zeros(outsideVectors.shape)
     
-#     print('gradCenterVec',gradCenterVec)
-#     print('gradOutsideVecs',gradOutsideVecs)
 
-    # asserting same size vectors
-    assert(centerWordVec.shape[0] == outsideVectors.shape[1])
-#     sys.exit()
-    ### YOUR CODE HERE
     ### Please use the provided softmax function (imported earlier in this file)
     ### This numerically stable implementation helps you avoid issues pertaining
     ### to integer overflow. 
     
+    # asserting same size vectors
+    assert(centerWordVec.shape[0] == outsideVectors.shape[1])
+
+    # cosine similarity between the center word and all the outside words
     cos_sim = outsideVectors.dot(centerWordVec)
-#     print('cos_sim ',cos_sim )
 
     # softmax to get the word probablities
     word_prob = softmax(cos_sim)
-#     print('word_prob',word_prob)
+
     # current outside word
     loss = -1 * math.log(word_prob[outsideWordIdx])
-#     print('loss ',loss )
-    
+
+    # multiply the probablities with the vectors    
     prob_dist = outsideVectors * np.reshape(word_prob,(outsideVectors.shape[0],1))
-#     print('prob_dist',prob_dist)
     
+    # as done in the assignment. Baby calculus.    
     gradCenterVec = (-1 * outsideVectors[outsideWordIdx] ) + np.sum(prob_dist,0)
     
     # outside vectors
-    # preserve the current outside word vector
-    currentOutsideVec = gradOutsideVecs[outsideWordIdx] 
-    
-    
     word_prob_col = word_prob.reshape(word_prob.shape[0],1)
 
-#     print('gradOutsideVecs ',gradOutsideVecs.shape)
-#     print('centerWordVec ',centerWordVec.shape)
-#     print('word_prob ',word_prob.shape)
-#     print('word_prob_col',word_prob_col.shape)
-#     
-#     print('centerWordVec ',centerWordVec)
-#     print('word_prob_col',word_prob_col)
-    
+    # for outside words except the current word (i.e not u_o)
     gradOutsideVecs = centerWordVec * word_prob_col
+    
+    # for the current outside word
     gradOutsideVecs[outsideWordIdx] = centerWordVec * (word_prob[outsideWordIdx]-1) 
     
-#     sys.exit()
-#     sys.exit()
-#     gradCenterVec
-#     print('gradCenterVec',gradCenterVec)
-
     ### END YOUR CODE
-#     sys.exit()
 
     return loss, gradCenterVec, gradOutsideVecs
 
@@ -156,87 +130,68 @@ def negSamplingLossAndGradient(
     Arguments/Return Specifications: same as naiveSoftmaxLossAndGradient
     """
 
+    # Negative sampling of words is done for you. Do not modify this if you
+    # wish to match the autograder and receive points!
+    negSampleWordIndices = getNegativeSamples(outsideWordIdx, dataset, K)
+    indices = [outsideWordIdx] + negSampleWordIndices
+    
+    ### YOUR CODE HERE
     loss = 0.0
     gradCenterVec = np.zeros(centerWordVec.shape)
     gradOutsideVecs = np.zeros(outsideVectors.shape)
 
 
-    # Negative sampling of words is done for you. Do not modify this if you
-    # wish to match the autograder and receive points!
-    negSampleWordIndices = getNegativeSamples(outsideWordIdx, dataset, K)
-    indices = [outsideWordIdx] + negSampleWordIndices
-#     print('negSampleWordIndices',negSampleWordIndices)
-    unique_ids, count_ids = np.unique(negSampleWordIndices,return_counts= True)
-#     print('unique',unique_ids)
-#     print('unique',unique_ids.shape)
-#     print('count ',count_ids )
-#     print('count ',count_ids.shape )
-
-#     print('negSampleWordIndices',negSampleWordIndices)
-    ### YOUR CODE HERE
-
     ### Please use your implementation of sigmoid in here.
     
+    # read note in API description. Sampler *may* select same word multiple times
+    # no matter how rare, this chance is still there in the real-world corpus
+    unique_ids, count_ids = np.unique(negSampleWordIndices,return_counts= True)
+    
+    # numpy is swiss knife for matrix manipulation
     uo_dot_vc = outsideVectors[outsideWordIdx].dot(centerWordVec)
    
-#     uk_dot_vc = outsideVectors[negSampleWordIndices].dot(centerWordVec)
+    # note the use of unique ids. We need to account for frequency too.
     uk_dot_vc = outsideVectors[unique_ids].dot(centerWordVec)
-         
-#     print('u_k_dot_v_c',uk_dot_vc)
-    
-    uk_dot_vc= uk_dot_vc * -1
-#     print('u_k_dot_v_c',uk_dot_vc)
-    sig_uk_vc = sigmoid(uk_dot_vc)
-#     print('sig_uk_vc',sig_uk_vc)
-    
-    log_uk = np.log(sig_uk_vc)
-#     print('log_uk',log_uk)
-    
-    log_uk = log_uk * count_ids
-#     print('log_uk',log_uk)
 
+    # forming the derived equation for gradients    
+    uk_dot_vc= uk_dot_vc * -1
+    sig_uk_vc = sigmoid(uk_dot_vc)
+    log_uk = np.log(sig_uk_vc)
+    
+    # here we account for the frequencies
+    log_uk = log_uk * count_ids
+
+    # part 2 of the loss eqn
     neg_sample = np.sum(log_uk)
-#     print('neg_sample',neg_sample)
     
-#     sys.exit()    
-    
-#     print('u_k_ids',u_k_ids.shape)
-#     print('u_k_dot_v_c',uk_dot_vc.shape)
+    # part 1 of the grad eqn
     sig_uo_dot_vc = sigmoid(uo_dot_vc)
     for_uo = np.log(sig_uo_dot_vc)
-#     print('for_uo',for_uo)
     
     loss -= (for_uo + neg_sample)
 
+    # center grad has 2 terms
     grad_vc_1 = (sig_uo_dot_vc-1) * outsideVectors[outsideWordIdx]
-#     print('grad_vc_1',grad_vc_1)
     
+    # the second term is for the negative samples
     sig_uk_vc = 1- sig_uk_vc
-#     print('sig_uk_vc',sig_uk_vc)
     
+    # account for the frequency
     sig_uk_vc_bin =   sig_uk_vc * count_ids
-#     print('sig_uk_vc_re_bin',sig_uk_vc_bin)
 
+    # for broadcasting 
     sig_uk_vc_re = sig_uk_vc_bin.reshape(sig_uk_vc_bin.shape[0],1)
-#     print('sig_uk_vc_re',sig_uk_vc_re)
-    
-    
     grad_vc_2 = np.sum(outsideVectors[unique_ids] * sig_uk_vc_re,axis=0)
-#     print('grad_vc_2',grad_vc_2)
        
     gradCenterVec = grad_vc_1 +  grad_vc_2
-    
-    
+
     # negativesample indexes has duplicate values. Need to take care of them
     # for grad center vectors we summed it over and hence it worked
     
-    
     # outside words gradient
     gradOutsideVecs[unique_ids] = sig_uk_vc_re * centerWordVec
-#     print('gradOutsideVecs',gradOutsideVecs)
-    
     gradOutsideVecs[outsideWordIdx] = (sig_uo_dot_vc-1) * centerWordVec
-#     print('gradOutsideVecs',gradOutsideVecs)
+
     ### END YOUR CODE
 
     return loss, gradCenterVec, gradOutsideVecs
@@ -272,78 +227,43 @@ def skipgram(currentCenterWord, windowSize, outsideWords, word2Ind,
     gradOutsideVectors -- the gradient with respect to the outside word vectors
                         (dJ / dU in the pdf handout)
     """
-#     print("bhenchooodd")
-#     print("currentCenterWord",currentCenterWord)
-#     print("windowSize",windowSize)
-#     print("outsideWords",outsideWords)
-#     print("word2Ind",word2Ind)
-#        
-#     print("centerWordVectors",centerWordVectors)
-#     print("outsideVectors",outsideVectors)
-#     print("dataset",dataset)
 
     loss = 0.0
     gradCenterVecs = np.zeros(centerWordVectors.shape)
     gradOutsideVectors = np.zeros(outsideVectors.shape)
-    gradCenterVec = np.zeros(centerWordVectors.shape[1])
-#     print('gradCenterVec.shape', gradCenterVec.shape)
-
+    
     ### YOUR CODE HERE
-#     for outsideword in outsideWords:
+    # maybe we can just reference it. This doesnt cost much though.
+    gradCenterVec = np.zeros(centerWordVectors.shape[1])
 
-#     centerWordVec,
-#     outsideWordIdx,
-#     outsideVectors,
-#     dataset
-    
-#     print(centerWordVectors)
-#     print(centerWordVectors[2,])
-#     print(centerWordVectors[2])
-#     print(word2Ind[currentCenterWord])
-
-#     sys.exit()
-    # the outside word vector gradients are particularly important to take care of
-    # here the test wont show our bug. So be careful.
-
-    # what about the outside vectors not in outside words?
-    
-    
+    # sanity checks
     try:
         centerWordVec = centerWordVectors[word2Ind[currentCenterWord]]
-#         print(centerWordVec)
     except:
-        #return if center word vector not available
         print("Oops!",sys.exc_info()[0],"occured.")
-        return    
+        return
 
 
+    # loop over all the outside words. For the skip-gram model
+    # fun exercise: Think how would it be for CBOW
+     
     for outWord in outsideWords:
 
         out_loss,gradCenterVecOne,gradOutsideVecsOne = word2vecLossAndGradient(centerWordVec, word2Ind[outWord],outsideVectors,dataset)
         gradCenterVec += gradCenterVecOne
         gradOutsideVectors += gradOutsideVecsOne
         loss += out_loss
-#         print('loss',loss)
-#         print('out_loss',out_loss)
+
+    # just the current center word vector
+    gradCenterVecs[word2Ind[currentCenterWord]] = gradCenterVec
     
     ### END YOUR CODE
-#     sys.exit()
 
-    gradCenterVecs[word2Ind[currentCenterWord]] = gradCenterVec
     return loss, gradCenterVecs, gradOutsideVectors
 
 #############################################
 # Testing functions below. DO NOT MODIFY!   #
 #############################################
-# first call:
-#     gradcheck_naive(lambda vec: word2vec_sgd_wrapper(
-#         word2vecModel = skipgram
-#         word2Ind = dummy_tokens
-#         wordVectors =  dummy_vectors
-#         dataset = dataset
-#         windowSize = 5
-#         word2vecLossAndGradient = naiveSoftmaxLossAndGradient
-          
         
 def word2vec_sgd_wrapper(word2vecModel, word2Ind, wordVectors, dataset, 
                          windowSize,
@@ -372,7 +292,7 @@ def word2vec_sgd_wrapper(word2vecModel, word2Ind, wordVectors, dataset,
 def test_word2vec():
     """ Test the two word2vec implementations, before running on Stanford Sentiment Treebank """
 
-    # dummy class declaration/initialization 
+    # dummy class declaration/initialization
     dataset = type('dummy', (), {})()
     def dummySampleTokenIdx():
         return random.randint(0, 4)
@@ -387,8 +307,6 @@ def test_word2vec():
     dataset.sampleTokenIdx = dummySampleTokenIdx
     dataset.getRandomContext = getRandomContext
 
- 
- 
     # Random number generation isn't truly "random". It is deterministic, and the
     # sequence it generates is dictated by the seed value you pass into random.seed.
     # Typically you just invoke random.seed(), and it uses the current time as the
@@ -398,8 +316,9 @@ def test_word2vec():
     random.seed(31415)
     np.random.seed(9265)
     
-    #     print(np.random.randn(10,3))
+    #print(np.random.randn(10,3))
     # Each vector should have unit length. Divide by the total vector length.
+    # normalization of vectors. Search for the why?
     dummy_vectors = normalizeRows(np.random.randn(10,3))
 
     # this is our dummy corpus. words = strings do not matter
