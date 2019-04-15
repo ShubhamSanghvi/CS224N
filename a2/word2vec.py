@@ -165,12 +165,12 @@ def negSamplingLossAndGradient(
     # wish to match the autograder and receive points!
     negSampleWordIndices = getNegativeSamples(outsideWordIdx, dataset, K)
     indices = [outsideWordIdx] + negSampleWordIndices
-    print('negSampleWordIndices',negSampleWordIndices)
+#     print('negSampleWordIndices',negSampleWordIndices)
     unique_ids, count_ids = np.unique(negSampleWordIndices,return_counts= True)
-    print('unique',unique)
-    print('unique',unique.shape)
-    print('count ',count )
-    print('count ',count.shape )
+#     print('unique',unique_ids)
+#     print('unique',unique_ids.shape)
+#     print('count ',count_ids )
+#     print('count ',count_ids.shape )
 
 #     print('negSampleWordIndices',negSampleWordIndices)
     ### YOUR CODE HERE
@@ -179,19 +179,26 @@ def negSamplingLossAndGradient(
     
     uo_dot_vc = outsideVectors[outsideWordIdx].dot(centerWordVec)
    
-    uk_dot_vc = outsideVectors[negSampleWordIndices].dot(centerWordVec)
-    print('u_k_dot_v_c',uk_dot_vc)
+#     uk_dot_vc = outsideVectors[negSampleWordIndices].dot(centerWordVec)
+    uk_dot_vc = outsideVectors[unique_ids].dot(centerWordVec)
+         
+#     print('u_k_dot_v_c',uk_dot_vc)
     
     uk_dot_vc= uk_dot_vc * -1
-    print('u_k_dot_v_c',uk_dot_vc)
+#     print('u_k_dot_v_c',uk_dot_vc)
     sig_uk_vc = sigmoid(uk_dot_vc)
-    print('sig_uk_vc',sig_uk_vc)
+#     print('sig_uk_vc',sig_uk_vc)
     
     log_uk = np.log(sig_uk_vc)
 #     print('log_uk',log_uk)
     
+    log_uk = log_uk * count_ids
+#     print('log_uk',log_uk)
+
     neg_sample = np.sum(log_uk)
 #     print('neg_sample',neg_sample)
+    
+#     sys.exit()    
     
 #     print('u_k_ids',u_k_ids.shape)
 #     print('u_k_dot_v_c',uk_dot_vc.shape)
@@ -202,16 +209,20 @@ def negSamplingLossAndGradient(
     loss -= (for_uo + neg_sample)
 
     grad_vc_1 = (sig_uo_dot_vc-1) * outsideVectors[outsideWordIdx]
-    print('grad_vc_1',grad_vc_1)
+#     print('grad_vc_1',grad_vc_1)
     
-    sig_uk_vc_re = sig_uk_vc.reshape(sig_uk_vc.shape[0],1)
-    print('sig_uk_vc_re',sig_uk_vc_re)
+    sig_uk_vc = 1- sig_uk_vc
+#     print('sig_uk_vc',sig_uk_vc)
     
-    sig_uk_vc_re = 1- sig_uk_vc_re
-    print('sig_uk_vc_re',sig_uk_vc_re)
+    sig_uk_vc_bin =   sig_uk_vc * count_ids
+#     print('sig_uk_vc_re_bin',sig_uk_vc_bin)
+
+    sig_uk_vc_re = sig_uk_vc_bin.reshape(sig_uk_vc_bin.shape[0],1)
+#     print('sig_uk_vc_re',sig_uk_vc_re)
     
-    grad_vc_2 = np.sum(outsideVectors[negSampleWordIndices] * sig_uk_vc_re,axis=0)
-    print('grad_vc_2',grad_vc_2)
+    
+    grad_vc_2 = np.sum(outsideVectors[unique_ids] * sig_uk_vc_re,axis=0)
+#     print('grad_vc_2',grad_vc_2)
        
     gradCenterVec = grad_vc_1 +  grad_vc_2
     
@@ -219,14 +230,13 @@ def negSamplingLossAndGradient(
     # negativesample indexes has duplicate values. Need to take care of them
     # for grad center vectors we summed it over and hence it worked
     
-    sys.exit()
     
     # outside words gradient
-    gradOutsideVecs[negSampleWordIndices] = sig_uk_vc_re * centerWordVec
-    print('gradOutsideVecs',gradOutsideVecs)
+    gradOutsideVecs[unique_ids] = sig_uk_vc_re * centerWordVec
+#     print('gradOutsideVecs',gradOutsideVecs)
     
     gradOutsideVecs[outsideWordIdx] = (sig_uo_dot_vc-1) * centerWordVec
-    print('gradOutsideVecs',gradOutsideVecs)
+#     print('gradOutsideVecs',gradOutsideVecs)
     ### END YOUR CODE
 
     return loss, gradCenterVec, gradOutsideVecs
@@ -262,15 +272,15 @@ def skipgram(currentCenterWord, windowSize, outsideWords, word2Ind,
     gradOutsideVectors -- the gradient with respect to the outside word vectors
                         (dJ / dU in the pdf handout)
     """
-    print("bhenchooodd")
-    print("currentCenterWord",currentCenterWord)
-    print("windowSize",windowSize)
-    print("outsideWords",outsideWords)
-    print("word2Ind",word2Ind)
-       
-    print("centerWordVectors",centerWordVectors)
-    print("outsideVectors",outsideVectors)
-    print("dataset",dataset)
+#     print("bhenchooodd")
+#     print("currentCenterWord",currentCenterWord)
+#     print("windowSize",windowSize)
+#     print("outsideWords",outsideWords)
+#     print("word2Ind",word2Ind)
+#        
+#     print("centerWordVectors",centerWordVectors)
+#     print("outsideVectors",outsideVectors)
+#     print("dataset",dataset)
 
     loss = 0.0
     gradCenterVecs = np.zeros(centerWordVectors.shape)
